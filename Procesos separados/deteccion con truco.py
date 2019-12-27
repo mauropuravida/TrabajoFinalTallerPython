@@ -40,9 +40,8 @@ face_names = []
 process_this_frame = True
 
 num_frame = 0
-last_frame = -100
-last_face_center = (-100, -100)
-last_name = ""
+modulus_processing_frame = 1
+latest_recognitions = []
 
 while True:
     # Grab a single frame of video
@@ -56,19 +55,27 @@ while True:
 
 
     # Only process every other frame of video to save time
-    if process_this_frame:
+    if num_frame % modulus_processing_frame == 0:
         # Find all the faces and face encodings in the current frame of video
         face_names = []
         face_locations = face_recognition.face_locations(rgb_small_frame)
         for (top, right, bottom, left) in face_locations:
-            condition = abs(last_face_center[0] - (right + left)/2) > 50 or abs(last_face_center[1] - (top + bottom)/2) > 50
-            if (last_frame + 30 < num_frame or condition):
+            was_it_before = False
+            name = "Intruso"
+            for (old_location_center, old_frame, old_name) in latest_recognitions[:]:
+                was_it_before = abs(old_location_center[0] - (right + left)/2) < 15 and abs(old_location_center[1] - (top + bottom)/2) < 15 and old_frame + 10 >= num_frame
+                if was_it_before:
+                    name = old_name
+                    latest_recognitions.remove((old_location_center, old_frame, old_name))
+                    latest_recognitions.append((((right + left)/2, (top + bottom)/2), num_frame, name))
+                    break
+                
+            if (not(was_it_before)):
                 face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
 
                 for face_encoding in face_encodings:
                     # See if the face is a match for the known face(s)
                     matches = face_recognition.compare_faces(known_face_encodings, face_encoding)
-                    name = "Unknown"
 
                     # # If a match was found in known_face_encodings, just use the first one.
                     # if True in matches:
@@ -81,14 +88,12 @@ while True:
                     if matches[best_match_index]:
                         name = known_face_names[best_match_index]
 
-                    face_names.append(name)
-                    last_name = name
-            last_face_center = ((right + left)/2, (top + bottom)/2)
-            if (not(condition)):
-                face_names.append(last_name)
+                    latest_recognitions.append((((right + left)/2, (top + bottom)/2), num_frame, name))
 
-
-    process_this_frame = not process_this_frame
+            face_names.append(name)
+        for (old_location_center, old_frame, old_name) in latest_recognitions[:]:
+            if (old_frame + 10 < num_frame):
+                latest_recognitions.remove((old_location_center, old_frame, old_name))
 
 
     # Display the results
@@ -112,7 +117,6 @@ while True:
         font = cv2.FONT_HERSHEY_DUPLEX
         cv2.putText(frame, name, (left + 6, bottom - 6), font, 1.0, (255, 255, 255), 1)
 
-        last_frame = num_frame
 
     # Display the resulting image
     cv2.imshow('Video', frame)
