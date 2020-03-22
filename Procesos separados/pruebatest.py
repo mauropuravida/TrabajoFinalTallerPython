@@ -7,14 +7,17 @@ import imutils
 import pickle
 import dlib
 
-dlib.DLIB_USE_CUDA = True
-
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-e", "--encodings", required=True,
     help="path to serialized db of facial encodings")
 ap.add_argument("-o", "--option", default=0,
-    help="")
+    help="input use cam mode")
+ap.add_argument("-m", "--mod", default="hog",
+    help="detect method")
+ap.add_argument("-s", "--scaled", default=0.25,
+    help="scaled for recognition face, 1 = best")
+
 args = vars(ap.parse_args())
 
 data = pickle.loads(open(args["encodings"], "rb").read())
@@ -29,10 +32,12 @@ data = pickle.loads(open(args["encodings"], "rb").read())
 # specific demo. If you have trouble installing it, try any of the other demos that don't require it instead.
 
 # Get a reference to webcam #0 (the default one)
-if args["option"] == 1:
+if args["option"] == '1':
     video_captures = [cv2.VideoCapture(0), cv2.VideoCapture(2)]
 else:
     video_captures = [cv2.VideoCapture(args["option"])]
+
+scaled = int(round(1.0 / float(args["scaled"]),0))
 
 
 def getColor(c):
@@ -51,6 +56,8 @@ def getColor(c):
 
 def getSizeText(w):
     return (w* 1.0 )/ 200
+
+
 
 
 # Create arrays of known face encodings and their names
@@ -76,7 +83,7 @@ while True:
         ret, frame = i.read()
 
         # Resize frame of video to 1/4 size for faster face recognition processing
-        small_frame = cv2.resize(frame, (0, 0), fx=0.5, fy=0.5)
+        small_frame = cv2.resize(frame, (0, 0), fx=float(args["scaled"]), fy=float(args["scaled"]))
 
         # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
         rgb_small_frame = small_frame[:, :, ::-1]
@@ -84,7 +91,7 @@ while True:
         # Only process every other frame of video to save time
         if process_this_frame:
             # Find all the faces and face encodings in the current frame of video
-            face_locations = face_recognition.face_locations(rgb_small_frame, model="hog")
+            face_locations = face_recognition.face_locations(rgb_small_frame, model=args["mod"])
             face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
 
             face_names = []
@@ -117,19 +124,19 @@ while True:
         index = 0
         for (top, right, bottom, left), name, prob in zip(face_locations, face_names, face_prob):
             # Scale back up face locations since the frame we detected in was scaled to 1/4 size
-            top *= 2
-            right *= 2
-            bottom *= 2
-            left *= 2
+            top *= scaled
+            right *= scaled
+            bottom *= scaled
+            left *= scaled
 
-            top -= 28
+            top -= 10
             left -= 0
-            bottom += 28
+            bottom += 10
             right += 0
 
 
             # Draw a box around the face
-            cv2.rectangle(frame, (left, top), (right, bottom), getColor(index), 2)
+            cv2.rectangle(frame, (left, top), (right, bottom), getColor(index), 1)
 
             sizeText = getSizeText(right-left)
 
@@ -159,7 +166,7 @@ while True:
 
     process_this_frame = not process_this_frame
 
-    if "option"==1:
+    if args["option"]== '1':
         numpy_vertical_concat = np.concatenate((frameList[0], frameList[1]), axis=1)
         cv2.imshow('Video', numpy_vertical_concat)
     else:

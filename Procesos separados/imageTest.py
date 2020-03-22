@@ -16,12 +16,14 @@ ap.add_argument("-e", "--encodings", required=True,
 ap.add_argument("-i", "--img", required=True,
     help="image input")
 ap.add_argument("-m", "--mod", default="hog",
-    help="image input")
-ap.add_argument("-p", "--proba", default=0.1,
-    help="image input")
+    help="detect method")
+ap.add_argument("-s", "--scaled", default=0.25,
+    help="scaled for recognition face, 1 = best")
 args = vars(ap.parse_args())
 
 data = pickle.loads(open(args["encodings"], "rb").read())
+
+scaled = int(1.0 / float(args["scaled"]))
 
 def getColor(c):
     switcher = {
@@ -65,7 +67,7 @@ face_names = []
 face_prob = []
 
 # Resize frame of video to 1/4 size for faster face recognition processing
-small_frame = cv2.resize(image, (0, 0), fx=0.5, fy=0.5)
+small_frame = cv2.resize(image, (0, 0), fx=float(args["scaled"]), fy=float(args["scaled"]))
 
 # Convert the image from BGR color (which OpenCV uses) to RGB color (which face_recognition uses)
 rgb_small_frame = small_frame[:, :, ::-1]
@@ -106,14 +108,14 @@ index = 0
 # Display the results
 for (top, right, bottom, left), name, prob in zip(face_locations, face_names, face_prob):
     # Scale back up face locations since the frame we detected in was scaled to 1/4 size
-    top *= 2
-    right *= 2
-    bottom *= 2
-    left *= 2
+    top *= scaled
+    right *= scaled
+    bottom *= scaled
+    left *= scaled
 
-    top -= 28
+    top -= 10
     left -= 0
-    bottom += 28
+    bottom += 10
     right += 0
 
     # Draw a box around the face
