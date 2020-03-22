@@ -98,7 +98,7 @@ for face_encoding in face_encodings:
     if matches[best_match_index]:
         name = known_face_names[best_match_index]
 
-        prob = float(round((100-best_match_index),2))
+        prob = round(face_distances[best_match_index],2)
 
 
     face_names.append(name)

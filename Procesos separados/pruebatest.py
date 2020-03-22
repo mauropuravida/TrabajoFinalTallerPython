@@ -7,6 +7,23 @@ import imutils
 import pickle
 import dlib
 
+def getColor(c):
+    switcher = {
+        0: (0, 0, 255),
+        1: (92, 234, 53),
+        2: (228, 236, 62),
+        3: (26, 182, 133),
+        4: (47, 95, 205),
+        5: (165, 47, 295),
+        6: (205, 47, 157),
+        7: (138, 12, 12)
+    }
+
+    return switcher.get(c)
+
+def getSizeText(w):
+    return (w* 1.0 )/ 200
+
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-e", "--encodings", required=True,
@@ -40,30 +57,9 @@ else:
 scaled = int(round(1.0 / float(args["scaled"]),0))
 
 
-def getColor(c):
-    switcher = {
-        0: (0, 0, 255),
-        1: (92, 234, 53),
-        2: (228, 236, 62),
-        3: (26, 182, 133),
-        4: (47, 95, 205),
-        5: (165, 47, 295),
-        6: (205, 47, 157),
-        7: (138, 12, 12)
-    }
-
-    return switcher.get(c)
-
-def getSizeText(w):
-    return (w* 1.0 )/ 200
-
-
-
-
 # Create arrays of known face encodings and their names
 known_face_encodings = data["encodings"]
 known_face_names = data["names"]
-
 
 # Initialize some variables
 face_locations = []
@@ -108,12 +104,13 @@ while True:
 
                 # Or instead, use the known face with the smallest distance to the new face
                 face_distances = face_recognition.face_distance(known_face_encodings, face_encoding)
+
                 best_match_index = np.argmin(face_distances)
                 if matches[best_match_index]:
                     name = known_face_names[best_match_index]
 
                     #prob = float(round(prob / len(face_distances),2))
-                    prob = float(round((100-best_match_index),2))
+                    prob = round((face_distances[best_match_index]),2)
 
                 face_names.append(name)
                 face_prob.append(prob)
@@ -160,6 +157,7 @@ while True:
         face_names.clear()
         face_locations.clear()
         face_encodings.clear()
+        face_prob.clear()
 
         #cv2.imshow('Video {}'.format(idx), frame)
         frameList.append(frame)
