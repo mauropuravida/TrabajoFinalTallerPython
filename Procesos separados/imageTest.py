@@ -7,8 +7,6 @@ import imutils
 import pickle
 import dlib
 
-dlib.DLIB_USE_CUDA = True
-
 # construct the argument parser and parse the arguments
 ap = argparse.ArgumentParser()
 ap.add_argument("-e", "--encodings", required=True,
@@ -40,7 +38,14 @@ def getColor(c):
     return switcher.get(c)
 
 def getSizeText(w):
-    return (w* 1.0 )/ 200
+    s0 = round(float(w/ 200.0), 2)
+    value = s0
+    if s0 < 0.5:
+        value = 0.5
+    else:
+        if s0 > 1.1:
+            value = 1.1
+    return value
     
 
 # This is a demo of running face recognition on live video from your webcam. It's a little more complicated than the
@@ -64,7 +69,7 @@ known_face_names = data["names"]
 face_locations = []
 face_encodings = []
 face_names = []
-face_prob = []
+face_dist = []
 
 # Resize frame of video to 1/4 size for faster face recognition processing
 small_frame = cv2.resize(image, (0, 0), fx=float(args["scaled"]), fy=float(args["scaled"]))
@@ -83,7 +88,7 @@ for face_encoding in face_encodings:
     matches = face_recognition.compare_faces(known_face_encodings, face_encoding, 0.6)
     name = "Unknown"
 
-    prob = 0.0
+    dist = 0.0
 
     #print(face_recognition.face_distance(known_face_encodings, face_encoding))
 
@@ -98,15 +103,16 @@ for face_encoding in face_encodings:
     if matches[best_match_index]:
         name = known_face_names[best_match_index]
 
-        prob = round(face_distances[best_match_index],2)
+        dist = round(face_distances[best_match_index],2)
+        print(name, " ",dist)
 
 
     face_names.append(name)
-    face_prob.append(prob)
+    face_dist.append(dist)
 
 index = 0
 # Display the results
-for (top, right, bottom, left), name, prob in zip(face_locations, face_names, face_prob):
+for (top, right, bottom, left), name, dist in zip(face_locations, face_names, face_dist):
     # Scale back up face locations since the frame we detected in was scaled to 1/4 size
     top *= scaled
     right *= scaled
@@ -123,17 +129,16 @@ for (top, right, bottom, left), name, prob in zip(face_locations, face_names, fa
 
     sizeText = getSizeText(right-left)
 
-    if prob == 0.0:
-        texto = str(name)
-    else:
-        texto = str(name)+' '+str(prob)
-
     # Draw a label with a name below the face
-    #cv2.rectangle(image, (left, bottom - 35), (right, bottom), (0, 0, 255), cv2.FILLED)
     font = cv2.FONT_HERSHEY_DUPLEX
-    cv2.putText(image, texto, (left + 1, bottom - 1), font, sizeText, getColor(index), 2) #shadow
-    cv2.putText(image, texto, (left + 3, bottom - 3), font, sizeText, getColor(index), 2) #shadow
-    cv2.putText(image, texto, (left + 2, bottom - 2), font, sizeText, (255, 255, 255), 1)
+    cv2.putText(image, str(name), (left + 1, bottom - 1), font, sizeText, getColor(index), 2) #shadow text
+    cv2.putText(image, str(name), (left + 3, bottom - 3), font, sizeText, getColor(index), 2) #shadow text
+    cv2.putText(image, str(name), (left + 2, bottom - 2), font, sizeText, (255, 255, 255), 1)
+
+    if dist != 0.0:
+        cv2.putText(image, str(dist), (left + 1, top - 1), font, sizeText, getColor(index), 2) #shadow distance
+        cv2.putText(image, str(dist), (left + 3, top - 3), font, sizeText, getColor(index), 2) #shadow distance
+        cv2.putText(image, str(dist), (left + 2, top - 2), font, sizeText, (255, 255, 255), 1) #distance
 
     index +=1
     if index == 8:
